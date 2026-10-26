@@ -1,9 +1,9 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Default to deployed Railway backend or local IP
+// Default to deployed Railway backend production URL
 // Users can customize this in the mobile app settings if desired
-export const DEFAULT_API_URL = 'http://10.0.2.2:5000/api'; // Android emulator localhost alias
+export const DEFAULT_API_URL = 'https://edukids-backend-production.up.railway.app/api';
 export const STORAGE_KEYS = {
   TOKEN: 'edukids_mobile_token',
   USER: 'edukids_mobile_user',
