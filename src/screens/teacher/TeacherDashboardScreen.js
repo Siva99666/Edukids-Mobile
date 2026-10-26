@@ -19,12 +19,16 @@ export default function TeacherDashboardScreen({ navigation }) {
 
   const loadData = async () => {
     try {
-      const [clsRes, hwRes] = await Promise.all([
-        classesApi.getAll().catch(() => ({ classes: [] })),
-        homeworkApi.getAll().catch(() => ({ homework: [] })),
-      ]);
-      setClasses(clsRes.classes || []);
-      setHwCount((hwRes.homework || []).length);
+      const clsRes = await classesApi.getMyClass().catch(() => ({ class: null }));
+      const myClass = clsRes.class;
+      setClasses(myClass ? [myClass] : []);
+
+      if (myClass?._id) {
+        const hwRes = await homeworkApi.getForClass(myClass._id).catch(() => ({ homework: [] }));
+        setHwCount((hwRes.homework || []).length);
+      } else {
+        setHwCount(0);
+      }
     } catch (e) {
       console.warn('TeacherDashboard load error:', e);
     } finally {

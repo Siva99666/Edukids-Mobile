@@ -22,12 +22,12 @@ export default function StudentHomeScreen({ navigation }) {
   const loadData = async () => {
     try {
       const [hwRes, examRes] = await Promise.all([
-        homeworkApi.getAll().catch(() => ({ homework: [] })),
-        examsApi.getAll().catch(() => ({ exams: [] })),
+        homeworkApi.getForStudent().catch(() => ({ homework: [] })),
+        examsApi.getForStudent().catch(() => ({ exams: [] })),
       ]);
       const list = hwRes.homework || [];
       const pending = list.filter(
-        (h) => !(h.completions || []).some((c) => c.studentId === user?._id || c.studentId === user?.id)
+        (h) => !(h.completions || []).some((c) => (c.studentId?._id || c.studentId) === (user?._id || user?.id) && (c.parentDone || c.teacherDone))
       );
       setHwCount(pending.length);
       setExamCount((examRes.exams || []).length);

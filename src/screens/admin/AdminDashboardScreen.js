@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { Colors } from '../../theme/colors';
-import { reportsApi, requestsApi } from '../../api/services';
+import { reportsApi, requestsApi, classesApi } from '../../api/services';
 
 export default function AdminDashboardScreen() {
   const { user, logout } = useAuth();
@@ -20,11 +20,16 @@ export default function AdminDashboardScreen() {
 
   const loadData = async () => {
     try {
-      const [statsRes, reqRes] = await Promise.all([
+      const [statsRes, reqRes, clsRes] = await Promise.all([
         reportsApi.getPlatformStats().catch(() => ({ summary: {} })),
         requestsApi.getPending().catch(() => ({ requests: [] })),
+        classesApi.getAll().catch(() => ({ classes: [] })),
       ]);
-      if (statsRes.summary) setStats(statsRes.summary);
+      const summary = statsRes.summary || {};
+      if (clsRes.classes) {
+        summary.totalClasses = clsRes.classes.length;
+      }
+      setStats(summary);
       setPending(reqRes.requests || []);
     } catch (e) {
       console.warn('Admin load error:', e);

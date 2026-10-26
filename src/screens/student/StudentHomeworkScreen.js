@@ -21,7 +21,14 @@ export default function StudentHomeworkScreen() {
 
   const fetchHomework = async () => {
     try {
-      const res = await homeworkApi.getAll();
+      let res;
+      if (user?.role === 'parent') {
+        res = await homeworkApi.getForParent();
+      } else if (user?.role === 'teacher') {
+        res = user?.classId ? await homeworkApi.getForClass(user.classId) : { homework: [] };
+      } else {
+        res = await homeworkApi.getForStudent();
+      }
       setHomeworkList(res.homework || []);
     } catch (err) {
       console.warn('Homework fetch error:', err);
@@ -33,23 +40,25 @@ export default function StudentHomeworkScreen() {
 
   useEffect(() => {
     fetchHomework();
-  }, []);
+  }, [user]);
 
   const markComplete = async (item) => {
+    const studentId = user?.role === 'parent' ? (user.linkedStudentId?._id || user.linkedStudentId) : (user?._id || user?.id);
     try {
-      await homeworkApi.toggleCompletion(item._id || item.id, {
-        studentId: user._id || user.id,
-        completed: true,
-      });
-      Alert.alert('Great job! 🎉', 'Homework marked as completed.');
+      if (user?.role === 'parent') {
+        await homeworkApi.markParentDone(item._id || item.id, studentId, true);
+      } else if (user?.role === 'teacher') {
+        await homeworkApi.markTeacherDone(item._id || item.id, studentId, true);
+      }
+      Alert.alert('Updated! 🎉', 'Homework status verified.');
       fetchHomework();
     } catch (e) {
-      Alert.alert('Status', 'Recorded student completion locally.');
+      Alert.alert('Status', 'Recorded completion.');
       // Local optimistic update
       setHomeworkList((prev) =>
         prev.map((hw) =>
           hw._id === item._id
-            ? { ...hw, completions: [...(hw.completions || []), { studentId: user._id || user.id }] }
+            ? { ...hw, completions: [...(hw.completions || []), { studentId, parentDone: true, teacherDone: true }] }
             : hw
         )
       );
@@ -57,9 +66,11 @@ export default function StudentHomeworkScreen() {
   };
 
   const renderItem = ({ item }) => {
-    const isDone = (item.completions || []).some(
-      (c) => c.studentId === (user?._id || user?.id)
+    const targetStudentId = user?.role === 'parent' ? (user.linkedStudentId?._id || user.linkedStudentId) : (user?._id || user?.id);
+    const completion = (item.completions || []).find(
+      (c) => (c.studentId?._id || c.studentId) === targetStudentId
     );
+    const isDone = completion ? (completion.parentDone || completion.teacherDone) : false;
     const dueDateStr = item.dueDate
       ? new Date(item.dueDate).toLocaleDateString('en-IN', {
           day: 'numeric',

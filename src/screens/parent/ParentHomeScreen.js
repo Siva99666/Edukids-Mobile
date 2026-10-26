@@ -9,10 +9,42 @@ import {
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { Colors } from '../../theme/colors';
+import { reportsApi, homeworkApi } from '../../api/services';
 
 export default function ParentHomeScreen({ navigation }) {
   const { user, logout } = useAuth();
+  const [report, setReport] = useState(null);
+  const [hwStats, setHwStats] = useState({ done: 100 });
   const [refreshing, setRefreshing] = useState(false);
+
+  const loadData = async () => {
+    try {
+      const [repRes, hwRes] = await Promise.all([
+        reportsApi.getParentReport().catch(() => ({ report: null })),
+        homeworkApi.getForParent().catch(() => ({ homework: [] })),
+      ]);
+      if (repRes.report) setReport(repRes.report);
+      const hwList = hwRes.homework || [];
+      if (hwList.length > 0) {
+        const studentId = user?.linkedStudentId?._id || user?.linkedStudentId;
+        const doneCount = hwList.filter(h => (h.completions || []).some(c => (c.studentId?._id || c.studentId) === studentId && (c.parentDone || c.teacherDone))).length;
+        setHwStats({ done: Math.round((doneCount / hwList.length) * 100) });
+      }
+    } catch (e) {
+      console.warn('ParentHome load error:', e);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [user]);
+
+  const childName = user?.linkedStudentId?.name || report?.student?.name || 'Arjun Kumar';
+  const childClass = user?.linkedStudentId?.grade || report?.student?.grade || 'Class 5A';
+  const attendanceRate = report?.attendanceRate != null ? `${report.attendanceRate}%` : '96%';
+  const avgGrade = report?.averageScore != null ? (report.averageScore >= 90 ? 'A+' : report.averageScore >= 80 ? 'A' : 'B+') : 'A+';
 
   return (
     <View style={styles.container}>
@@ -22,7 +54,7 @@ export default function ParentHomeScreen({ navigation }) {
           <Text style={styles.userName}>{user?.name || 'Parent'}</Text>
           <View style={styles.childPill}>
             <Text style={styles.childText}>
-              Child: {user?.linkedStudentId?.name || 'Arjun Kumar (Class 5A)'}
+              Child: {childName} ({childClass})
             </Text>
           </View>
         </View>
@@ -38,7 +70,7 @@ export default function ParentHomeScreen({ navigation }) {
             refreshing={refreshing}
             onRefresh={() => {
               setRefreshing(true);
-              setTimeout(() => setRefreshing(false), 800);
+              loadData();
             }}
             tintColor={Colors.primary}
           />
@@ -49,8 +81,8 @@ export default function ParentHomeScreen({ navigation }) {
           <View style={styles.childHeader}>
             <Text style={{ fontSize: 36 }}>🧒</Text>
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.childName}>Arjun Kumar</Text>
-              <Text style={styles.childMeta}>Roll #18 • Green Valley Academy</Text>
+              <Text style={styles.childName}>{childName}</Text>
+              <Text style={styles.childMeta}>{childClass} • Green Valley Academy</Text>
             </View>
             <View style={styles.standingBadge}>
               <Text style={styles.standingText}>Top 5%</Text>
@@ -59,17 +91,17 @@ export default function ParentHomeScreen({ navigation }) {
 
           <View style={styles.childStats}>
             <View style={styles.statBox}>
-              <Text style={styles.statNum}>96%</Text>
+              <Text style={styles.statNum}>{attendanceRate}</Text>
               <Text style={styles.statSub}>Attendance</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
-              <Text style={styles.statNum}>A+</Text>
+              <Text style={styles.statNum}>{avgGrade}</Text>
               <Text style={styles.statSub}>Average Grade</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBox}>
-              <Text style={styles.statNum}>100%</Text>
+              <Text style={styles.statNum}>{hwStats.done}%</Text>
               <Text style={styles.statSub}>Homework Done</Text>
             </View>
           </View>
