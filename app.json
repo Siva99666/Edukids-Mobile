@@ -8,6 +8,8 @@
     "userInterfaceStyle": "dark",
     "android": {
       "package": "com.edukids.app",
+      "versionCode": 1,
+      "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"],
       "adaptiveIcon": {
         "backgroundColor": "#0F0F23",
         "foregroundImage": "./assets/android-icon-foreground.png",
